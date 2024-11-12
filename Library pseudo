@@ -1,0 +1,19 @@
+/*************************************************************/
+/* Author: [Your Name]                                       */
+/* Major: Computer Science                                   */
+/* Creation Date: [Date]                                     */
+/* Due Date: November 22, 2024                               */
+/* Course: CPSC 328                                          */
+/* Professor Name: Dr. Dylan Schwesinger                     */
+/* Assignment: Network Program Implementation – File Server  */
+/* Filename: utilities.cpp                                   */
+/* Purpose: This file contains utility functions used by     */
+/*          both the server and client, including helper     */
+/*          functions for data formatting, error handling,   */
+/*          and file management.                             */
+/* Citations:                                                */
+/* [1] Linux Man Pages, "open(2) - Linux manual page",       */
+/*     https://man7.org/linux/man-pages/man2/open.2.html     */
+/* [2] Stack Overflow, "How to handle errors in C++",        */
+/*     https://stackoverflow.com/questions/...               */
+/*************************************************************/
