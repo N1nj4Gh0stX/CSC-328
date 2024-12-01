@@ -1,0 +1,21 @@
+/*************************************************************/
+/* Author: [Your Name]                                       */
+/* Major: Computer Science                                   */
+/* Creation Date: [Date]                                     */
+/* Due Date: November 22, 2024                               */
+/* Course: CPSC 328                                          */
+/* Professor Name: Dr. Dylan Schwesinger                     */
+/* Assignment: Network Program Implementation – File Server  */
+/* Filename: client_main.cpp                                 */
+/* Purpose: This file contains the main entry point of the   */
+/*          client program. It manages connection setup,     */
+/*          command-line argument parsing, file upload,      */
+/*          and file retrieval from the server.              */
+/* Citations:                                                */
+/* [1] Linux Man Pages, "connect(2) - Linux manual page",    */
+/*     https://man7.org/linux/man-pages/man2/connect.2.html  */
+/* [2] Brian "Beej" Hall, "Beej's Guide to Network           */
+/*     Programming," https://beej.us/guide/bgnet/            */
+/*************************************************************/
+#include <iostream>
+#include "socket.h"
