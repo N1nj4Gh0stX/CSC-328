@@ -1,4 +1,7 @@
-# File Server and Client Project
+# CSC 328 - File Server and Client Project
+
+## Authors
+- Lizmary Delarosa and Arkadiusz Gebka
 
 ## Overview
 This project implements a file server and client application in C++ for transferring files between a server and a client using TCP sockets. The server can serve files from a specific directory, and the client can upload or download files, including support for recursive directory operations. The project adheres to secure coding practices, ensuring that files are only accessed within allowed directories.
@@ -91,7 +94,4 @@ If used within an academic system, it is recommended to create two dedicated dir
 - Ensures the server only serves files within the specified base directory.
 - Handles errors gracefully, providing meaningful feedback to the user.
 - Validates user inputs to prevent directory traversal attacks.
-
-## Authors
-- Lizmary Delarosa and Arkadiusz Gebka
 
