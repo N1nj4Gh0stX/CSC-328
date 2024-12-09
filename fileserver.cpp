@@ -39,12 +39,6 @@ void sendallFile(mysock &client, const string &file_path) {
 }
 
 void recvFile(mysock &client, const string &file_path) {
-    fs::path absolute_path = fs::absolute(file_path);
-    if (absolute_path.string().find(base_directory) != 0) {
-        client.clientsend("Error: Access denied.");
-        return;
-    }
-
     ofstream outfile(file_path, ios::binary);
     if (!outfile) {
         client.clientsend("Error: Cannot create file.");
@@ -54,11 +48,15 @@ void recvFile(mysock &client, const string &file_path) {
     char buffer[1024];
     int receivedBytes;
     while ((receivedBytes = client.clientrecv(buffer, sizeof(buffer))) > 0) {
-        outfile.write(buffer, receivedBytes);
+        string data(buffer, receivedBytes);
+        if (data == "EOF") break;
+        outfile.write(data.c_str(), data.size());
     }
+
     outfile.close();
     cout << "File received: " << file_path << endl;
 }
+
 
 void handleClient(mysock &client) {
     string current_directory = base_directory;
@@ -131,7 +129,15 @@ void handleClient(mysock &client) {
                     client.clientsend("Error: Invalid file type.");
                 }
             } else if (cmd == "put") {
-                recvFile(client, current_directory + "/" + arg1);
+                    fs::path target_path = fs::absolute(current_directory + "/" + arg1);
+
+                    if (fs::exists(target_path)) {
+                        client.clientsend("Error: File or directory already exists.");
+                        return;
+                    }
+
+                    recvFile(client, target_path.string());
+                    client.clientsend("File received: " + target_path.string());
             } else {
                 client.clientsend("Error: Unknown command.");
             }
