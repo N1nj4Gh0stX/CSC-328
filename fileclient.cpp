@@ -40,47 +40,50 @@ void recvallFile(mysock &s, const string &remote_file, const string &local_file)
 }
 
 
-//get function for directories and files
+// get function for directories and files
 void getRecursive(mysock &s, const string &remote_path, const string &local_path) {
+    // Send the recursive get request to the server
     s.clientsend("get -R " + remote_path);
 
     char response_buffer[1024];
-    int receivedBytes = s.clientrecv(response_buffer, sizeof(response_buffer));
-    string response(response_buffer, receivedBytes);
+    int receivedBytes;
 
-    if (response == "Error") {
-        cout << "Error: Directory not found on the server.\n";
-        return;
-    }
+    // Process server responses
+    while ((receivedBytes = s.clientrecv(response_buffer, sizeof(response_buffer))) > 0) {
+        string response(response_buffer, receivedBytes);
 
-    try {
-        fs::create_directory(local_path);
-    } catch (const fs::filesystem_error &e) {
-        cout << "Error creating local directory: " << e.what() << endl;
-        return;
-    }
+        if (response == "EOF") break; // End of directory listing
 
-    s.clientsend("ls " + remote_path);
+        stringstream ss(response);
+        string type, relative_path;
+        ss >> type >> relative_path;
 
-    receivedBytes = s.clientrecv(response_buffer, sizeof(response_buffer));
-    string file_list(response_buffer, receivedBytes);
+        string local_file_path = local_path + "/" + relative_path;
+        string remote_file_path = remote_path + "/" + relative_path;
 
-    stringstream ss(file_list);
-    string filepath;
-    while (getline(ss, filepath, '\n')) {
-        if (filepath.back() == '/') {
-            getRecursive(s, remote_path + "/" + filepath, local_path + "/" + filepath);
-        } else {
-            s.clientsend("get " + remote_path + "/" + filepath);
-            recvallFile(s, remote_path + "/" + filepath, local_path + "/" + filepath);
+        if (type == "DIR") {
+            // Create the corresponding local directory
+            try {
+                fs::create_directories(local_file_path);
+                cout << "Directory created: " << local_file_path << endl;
+            } catch (const fs::filesystem_error &e) {
+                cout << "Error creating local directory: " << e.what() << endl;
+            }
+        } else if (type == "FILE") {
+            // Fetch the file from the server
+            s.clientsend("get " + remote_file_path);
+            recvallFile(s, remote_file_path, local_file_path);
         }
     }
+
+    cout << "Directory download complete: " << local_path << endl;
 }
 
 
 
-//put function for directories and files
+// put function for directories and files
 void putRecursive(mysock &s, const string &local_path, const string &remote_path) {
+    // Ensure the remote directory exists
     s.clientsend("mkdir " + remote_path);
     char buffer[1024];
     int receivedBytes = s.clientrecv(buffer, sizeof(buffer));
@@ -91,16 +94,25 @@ void putRecursive(mysock &s, const string &local_path, const string &remote_path
         return;
     }
 
+    // Iterate through the local directory structure
     for (const auto &entry : fs::recursive_directory_iterator(local_path)) {
         string local_file_path = entry.path().string();
         string relative_path = fs::relative(entry.path(), local_path).string();
         string remote_file_path = remote_path + "/" + relative_path;
 
         if (entry.is_directory()) {
+            // Create the corresponding remote directory
             s.clientsend("mkdir " + remote_file_path);
-            s.clientrecv(buffer, sizeof(buffer)); // Ignore response for mkdir
-        } else {
+            s.clientrecv(buffer, sizeof(buffer)); // Ignore mkdir response
+            cout << "Remote directory created: " << remote_file_path << endl;
+        } else if (entry.is_regular_file()) {
+            // Upload the file
             ifstream infile(local_file_path, ios::binary);
+            if (!infile.is_open()) {
+                cout << "Error opening local file: " << local_file_path << endl;
+                continue;
+            }
+
             s.clientsend("put " + remote_file_path);
             while (infile.read(buffer, sizeof(buffer))) {
                 s.clientsend(string(buffer, infile.gcount()));
@@ -108,9 +120,14 @@ void putRecursive(mysock &s, const string &local_path, const string &remote_path
             infile.close();
             s.clientsend("EOF");
             cout << "File uploaded: " << local_file_path << " -> " << remote_file_path << endl;
+        } else {
+            cout << "Skipping unsupported file type: " << local_file_path << endl;
         }
     }
+
+    cout << "Directory upload complete: " << local_path << endl;
 }
+
 
 //lwd function
 void printLocalWorkingDirectory() {
