@@ -112,9 +112,6 @@ void putRecursive(mysock &s, const string &local_path, const string &remote_path
     }
 }
 
-
-
-
 //lwd function
 void printLocalWorkingDirectory() {
 	char cwd[PATH_MAX]; // PATH_MAX is the maximum length for paths
