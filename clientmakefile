@@ -1,7 +1,8 @@
+// g++ --std=c++17 for filesystem usage 
 all: fileclient
 
 fileclient: main.o parse.o socket.o
-	g++ --std=c++17 main.o parse.o socket.o -lstdc++fs -o fileclient
+	g++ --std=c++17 main.o parse.o socket.o -lstdc++fs -o fileclient 
 
 main.o: main.cpp
 	g++ --std=c++17 -c main.cpp
