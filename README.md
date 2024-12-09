@@ -86,6 +86,23 @@ Example:
 
 If used within an academic system, it is recommended to create two dedicated directories: one for the server and one for the local client. These directories should contain pre-created, organized test files. This structure simplifies and accelerates testing by avoiding the need to generate files during runtime.
 
+### Client Commands
+
+| Command                | Description                                                        |
+|------------------------|--------------------------------------------------------------------|
+| `help`                | Displays a list of available commands.                            |
+| `exit`                | Disconnects from the server and exits.                            |
+| `cd <path>`           | Changes the remote working directory.                             |
+| `lcd <path>`          | Changes the local working directory.                              |
+| `pwd`                 | Displays the remote working directory.                            |
+| `lpwd`                | Displays the local working directory.                             |
+| `ls [path]`           | Lists contents of the remote directory.                           |
+| `lls [path]`          | Lists contents of the local directory.                            |
+| `mkdir <path>`        | Creates a directory on the server.                                |
+| `lmkdir <path>`       | Creates a directory locally.                                      |
+| `get <remote> [local]`| Downloads a file or directory from the server to the local system. |
+| `put <local> [remote]`| Uploads a file or directory to the server.                         |
+
 ## File/Folder Manifest
 
 - **`fileserver.cpp`**: Implements the server application, including client handling, command parsing, and file operations.
