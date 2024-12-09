@@ -1,0 +1,25 @@
+all: fileclient
+
+fileclient: main.o parse.o socket.o
+	g++ --std=c++17 main.o parse.o socket.o -lstdc++fs -o fileclient
+
+main.o: main.cpp
+	g++ --std=c++17 -c main.cpp
+
+parse.o: parse.h parse.cpp	
+	g++ --std=c++17 -c parse.cpp
+
+socket.o: socket.cpp socket.h
+	g++ --std=c++17 -c socket.cpp
+
+
+
+.PHONY: clean
+
+clean:
+	rm *.o fileclient
+
+//submit: not needed 
+//	~schwesin/bin/submit cpsc328 project4 
+
+//.PHONY: submit
