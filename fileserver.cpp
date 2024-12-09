@@ -113,20 +113,41 @@ void handleClient(mysock &client) {
                     client.clientsend("Error: Directory already exists or cannot be created.");
                 }
             } else if (cmd == "get") {
-                fs::path target_path = fs::absolute(current_directory + "/" + arg1);
+                if (arg1 == "-R") {
+                    // Handle recursive get
+                    fs::path target_path = fs::absolute(current_directory + "/" + arg2);
 
-                if (!fs::exists(target_path)) {
-                    client.clientsend("Error: File or directory does not exist.");
-                } else if (fs::is_directory(target_path)) {
-                    if (arg1 == "-R") {
-                        client.clientsend("Recursive get not implemented.");
-                    } else {
-                        client.clientsend("Error: Cannot fetch directory without -R flag.");
+                    if (!fs::exists(target_path)) {
+                        client.clientsend("Error: Directory not found.");
+                        continue;
                     }
-                } else if (fs::is_regular_file(target_path)) {
-                    sendallFile(client, target_path.string());
+
+                    if (fs::is_regular_file(target_path)) {
+                        client.clientsend("Error: -R flag is not applicable to files.");
+                        continue;
+                    }
+
+                    // Send the directory structure
+                    for (const auto &entry : fs::recursive_directory_iterator(target_path)) {
+                        string relative_path = fs::relative(entry.path(), target_path).string();
+                        if (fs::is_directory(entry)) {
+                            client.clientsend("DIR " + relative_path + "\n");
+                        } else if (fs::is_regular_file(entry)) {
+                            client.clientsend("FILE " + relative_path + "\n");
+                        }
+                    }
+                    client.clientsend("EOF");
                 } else {
-                    client.clientsend("Error: Invalid file type.");
+                    // Handle single file get
+                    fs::path target_path = fs::absolute(current_directory + "/" + arg1);
+
+                    if (!fs::exists(target_path)) {
+                        client.clientsend("Error: File or directory does not exist.");
+                    } else if (fs::is_regular_file(target_path)) {
+                        sendallFile(client, target_path.string());
+                    } else {
+                        client.clientsend("Error: Invalid file type.");
+                    }
                 }
             } else if (cmd == "put") {
                     fs::path target_path = fs::absolute(current_directory + "/" + arg1);
