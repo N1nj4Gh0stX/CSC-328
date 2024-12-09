@@ -9,13 +9,17 @@ fileserver: fileserver.o
 fileserver.o: fileserver.cpp
 	$(CC) $(CFLAGS) -c fileserver.cpp
 
-fileclient: fileclient.o
-	$(CC) $(CFLAGS) -o fileclient fileclient.o
+fileclient: main.o parse.o socket.o
+	$(CC) $(CFLAGS) main.o parse.o socket.o -lstdc++fs -o fileclient
 
-fileclient.o: fileclient.cpp
-	$(CC) $(CFLAGS) -c fileclient.cpp
+main.o: main.cpp
+	$(CC) $(CFLAGS) -c main.cpp
+
+parse.o: parse.h parse.cpp
+	$(CC) $(CFLAGS) -c parse.cpp
+
+socket.o: socket.cpp socket.h
+	$(CC) $(CFLAGS) -c socket.cpp
 
 clean:
 	rm -f *.o fileserver fileclient
-
-
