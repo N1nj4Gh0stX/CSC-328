@@ -143,6 +143,11 @@ Responses include status messages or file data in plain text, with `EOF` marking
    - **Problem**: Managing multiple clients simultaneously.
    - **Solution**: Used process forking to isolate each client session.
 
+3. **Client-Side Crashes During Recursive Uploads and Downloads**:
+
+   - **Problem**: The client occasionally crashes during recursive operations due to memory management or large data transfers.
+   - **Solution**: Added buffer size limits and enhanced error handling to detect and address issues during file transmission.
+
 ## Status
 
 The project is fully functional and meets the specified requirements. Known issues:
