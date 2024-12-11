@@ -166,7 +166,7 @@ The project is fully functional and meets the specified requirements. Known issu
 
 - Error handling for invalid commands can be improved.
 - Limited support for non-ASCII filenames.
-- The client occasionally crashes during recursive uploads and downloads due to memory management or large data transfers.
+- The client occasionally crashes during recursive uploads and downloads of directories. Restarting the client-side program is required to resume operations.
 
 ## Authors
 
