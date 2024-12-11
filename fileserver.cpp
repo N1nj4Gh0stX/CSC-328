@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <csignal>
 #include <unistd.h>
+#include <set>
 #include <cstring>
 #include "socket.h"
 
@@ -14,6 +15,9 @@ string base_directory;
 bool shutdown_flag = false;
 
 void sendallFile(mysock &client, const string &file_path) {
+    static set<string> sent_files; // Track sent files for debugging
+    cout << "Invoking sendallFile for: " << file_path << endl;
+
     fs::path absolute_path = fs::absolute(file_path);
     if (absolute_path.string().find(base_directory) != 0) {
         client.clientsend("Error: Access denied.");
@@ -38,6 +42,8 @@ void sendallFile(mysock &client, const string &file_path) {
     cout << "File sent: " << file_path << endl;
 }
 
+
+
 void recvFile(mysock &client, const string &file_path) {
     ofstream outfile(file_path, ios::binary);
     if (!outfile) {
@@ -56,6 +62,7 @@ void recvFile(mysock &client, const string &file_path) {
     outfile.close();
     cout << "File received: " << file_path << endl;
 }
+
 
 
 void handleClient(mysock &client) {
@@ -89,13 +96,16 @@ void handleClient(mysock &client) {
                     client.clientsend("Directory changed to: " + current_directory);
                 } else {
                     client.clientsend("Error: Invalid directory.");
+                    continue;
                 }
             } else if (cmd == "pwd") {
                 client.clientsend(current_directory);
+                continue;
             } else if (cmd == "ls") {
                 fs::path list_path = arg1.empty() ? current_directory : current_directory + "/" + arg1;
                 if (!fs::exists(list_path)) {
                     client.clientsend("Error: Path does not exist.");
+                    continue;
                 } else if (fs::is_directory(list_path)) {
                     stringstream response;
                     for (const auto &entry : fs::directory_iterator(list_path)) {
@@ -104,6 +114,7 @@ void handleClient(mysock &client) {
                     client.clientsend(response.str());
                 } else {
                     client.clientsend("Error: Specified path is not a directory.");
+                    continue;
                 }
             } else if (cmd == "mkdir") {
                 fs::path dir_path = current_directory + "/" + arg1;
@@ -112,61 +123,46 @@ void handleClient(mysock &client) {
                 } else {
                     client.clientsend("Error: Directory already exists or cannot be created.");
                 }
+                continue;
             } else if (cmd == "get") {
-                if (arg1 == "-R") {
-                    // Handle recursive get
-                    fs::path target_path = fs::absolute(current_directory + "/" + arg2);
+                cout << "Processing 'get' command for: " << arg1 << endl; // Debug log
+                fs::path target_path = fs::absolute(current_directory + "/" + arg1);
 
-                    if (!fs::exists(target_path)) {
-                        client.clientsend("Error: Directory not found.");
-                        continue;
-                    }
+                if (!fs::exists(target_path)) {
+                    client.clientsend("Error: File or directory does not exist.");
+                    continue;
+                }
 
-                    if (fs::is_regular_file(target_path)) {
-                        client.clientsend("Error: -R flag is not applicable to files.");
-                        continue;
-                    }
-
-                    // Send the directory structure
-                    for (const auto &entry : fs::recursive_directory_iterator(target_path)) {
-                        string relative_path = fs::relative(entry.path(), target_path).string();
-                        if (fs::is_directory(entry)) {
-                            client.clientsend("DIR " + relative_path + "\n");
-                        } else if (fs::is_regular_file(entry)) {
-                            client.clientsend("FILE " + relative_path + "\n");
-                        }
-                    }
-                    client.clientsend("EOF");
+                if (fs::is_regular_file(target_path)) {
+                    sendallFile(client, target_path.string());
+                    cout << "File sent: " << target_path.string() << endl; // Log the file transfer
+                    client.clientsend("EOF"); // Explicitly signal the end of transfer
                 } else {
-                    // Handle single file get
-                    fs::path target_path = fs::absolute(current_directory + "/" + arg1);
-
-                    if (!fs::exists(target_path)) {
-                        client.clientsend("Error: File or directory does not exist.");
-                    } else if (fs::is_regular_file(target_path)) {
-                        sendallFile(client, target_path.string());
-                    } else {
-                        client.clientsend("Error: Invalid file type.");
-                    }
+                    client.clientsend("Error: Specified path is not a file.");
+                    continue;
                 }
             } else if (cmd == "put") {
-                    fs::path target_path = fs::absolute(current_directory + "/" + arg1);
+                fs::path target_path = fs::absolute(current_directory + "/" + arg1);
 
-                    if (fs::exists(target_path)) {
-                        client.clientsend("Error: File or directory already exists.");
-                        return;
-                    }
+                if (fs::exists(target_path)) {
+                    client.clientsend("Warning: File already exists. Overwriting.");
+                    cout << "Overwriting existing file: " << target_path.string() << endl;
+                }
 
-                    recvFile(client, target_path.string());
-                    client.clientsend("File received: " + target_path.string());
+                recvFile(client, target_path.string());
+                client.clientsend("File received: " + target_path.string());
+                cout << "File uploaded: " << target_path.string() << endl; // Log the upload
             } else {
                 client.clientsend("Error: Unknown command.");
+                continue;
             }
         }
     } catch (const exception &e) {
         cerr << "Error handling client: " << e.what() << endl;
     }
 }
+
+
 
 void signalHandler(int signal) {
     if (signal == SIGINT) {
