@@ -10,6 +10,7 @@
 #include <fstream>
 #include <string>
 #include <cstdlib>
+#include <set>
 #include <dirent.h>
 #include <sys/stat.h>
 #include <stack>
@@ -22,25 +23,44 @@ using namespace std;
 namespace fs = std::filesystem;
 
 //recvall a file from the server
-void recvallFile(mysock &s, const string &remote_file, const string &local_file) {
-    ofstream outfile(local_file, ios::binary); // Open the local file for writing in binary mode
-    char buffer[1024];
-    int receivedBytes;
-
-    while ((receivedBytes = s.clientrecv(buffer, sizeof(buffer))) > 0) {
-        string file_data(buffer, receivedBytes); // Convert received data to a string
-        if (file_data == "EOF") { // Check for EOF
-            break;
-        }
-        outfile.write(file_data.c_str(), file_data.size()); // Write received data to the local file
+void recvallFile(mysock &s, const string &local_file_path) {
+    ofstream outFile(local_file_path, ios::binary);
+    if (!outFile) {
+        cerr << "Error: Cannot create local file " << local_file_path << endl;
+        s.clientsend("Error: Cannot create file.");
+        return;
     }
 
-    outfile.close(); // Close the local file
-    cout << "File received: " << local_file << endl;
+    char buffer[1024];
+    while (true) {
+        int receivedBytes = s.clientrecv(buffer, sizeof(buffer));
+        if (receivedBytes <= 0) {
+            cerr << "Error: Connection lost or server error during file transfer." << endl;
+            break;
+        }
+
+        string data(buffer, receivedBytes);
+
+        // Detect EOF explicitly
+        if (data == "EOF") {
+            cout << "File transfer completed: " << local_file_path << endl;
+            break;
+        }
+
+        // Write received data to file
+        outFile.write(data.c_str(), data.size());
+    }
+
+    outFile.close();
+    if (!outFile) {
+        cerr << "Error: Writing to file failed." << endl;
+    }
 }
 
 
-// get function for directories and files
+
+
+
 void getRecursive(mysock &s, const string &remote_path, const string &local_path) {
     // Send the recursive get request to the server
     s.clientsend("get -R " + remote_path);
@@ -52,14 +72,17 @@ void getRecursive(mysock &s, const string &remote_path, const string &local_path
     while ((receivedBytes = s.clientrecv(response_buffer, sizeof(response_buffer))) > 0) {
         string response(response_buffer, receivedBytes);
 
-        if (response == "EOF") break; // End of directory listing
+        // End of directory listing
+        if (response == "EOF") {
+            cout << "Server signaled end of directory listing." << endl;
+            break;
+        }
 
         stringstream ss(response);
         string type, relative_path;
         ss >> type >> relative_path;
 
         string local_file_path = local_path + "/" + relative_path;
-        string remote_file_path = remote_path + "/" + relative_path;
 
         if (type == "DIR") {
             // Create the corresponding local directory
@@ -67,17 +90,31 @@ void getRecursive(mysock &s, const string &remote_path, const string &local_path
                 fs::create_directories(local_file_path);
                 cout << "Directory created: " << local_file_path << endl;
             } catch (const fs::filesystem_error &e) {
-                cout << "Error creating local directory: " << e.what() << endl;
+                cerr << "Error creating local directory: " << e.what() << endl;
+                continue; // Skip to the next item
             }
         } else if (type == "FILE") {
             // Fetch the file from the server
-            s.clientsend("get " + remote_file_path);
-            recvallFile(s, remote_file_path, local_file_path);
+            cout << "Fetching file: " << relative_path << " -> " << local_file_path << endl;
+            s.clientsend("get " + relative_path);
+            recvallFile(s, local_file_path); // Corrected call
+        } else {
+            cerr << "Unknown type received: " << type << endl;
+            continue; // Skip invalid responses
         }
+    }
+
+    // Detect socket closure or end of response
+    if (receivedBytes <= 0) {
+        cerr << "Error: Connection lost or server closed unexpectedly." << endl;
     }
 
     cout << "Directory download complete: " << local_path << endl;
 }
+
+
+
+
 
 
 
@@ -268,7 +305,7 @@ int main(int argc, char **argv) {
                 getRecursive(s, remote_path, local_path);
             } else {
                 s.clientsend("get " + remote_path);
-                recvallFile(s, remote_path, local_path);
+                recvallFile(s, local_path);
             }
         } else if (command == "put") {
             size_t flag_pos = argument.find("-R");
