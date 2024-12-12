@@ -1,4 +1,4 @@
-# CSC 328 - File Server and Client Project
+# File Server and Client Project
 
 ## ID Block
 
@@ -89,27 +89,27 @@ If used within an academic system, it is recommended to create two dedicated dir
 ### Client Commands
 
 | Command                | Description                                                        |
-|------------------------|--------------------------------------------------------------------|
-| `help`                | Displays a list of available commands.                            |
-| `exit`                | Disconnects from the server and exits.                            |
-| `cd <path>`           | Changes the remote working directory.                             |
-| `lcd <path>`          | Changes the local working directory.                              |
-| `pwd`                 | Displays the remote working directory.                            |
-| `lpwd`                | Displays the local working directory.                             |
-| `ls [path]`           | Lists contents of the remote directory.                           |
-| `lls [path]`          | Lists contents of the local directory.                            |
-| `mkdir <path>`        | Creates a directory on the server.                                |
-| `lmkdir <path>`       | Creates a directory locally.                                      |
-| `get <remote> [local]`| Downloads a file or directory from the server to the local system. |
-| `put <local> [remote]`| Uploads a file or directory to the server.                         |
+| ---------------------- | ------------------------------------------------------------------ |
+| `help`                 | Displays a list of available commands.                             |
+| `exit`                 | Disconnects from the server and exits.                             |
+| `cd <path>`            | Changes the remote working directory.                              |
+| `lcd <path>`           | Changes the local working directory.                               |
+| `pwd`                  | Displays the remote working directory.                             |
+| `lpwd`                 | Displays the local working directory.                              |
+| `ls [path]`            | Lists contents of the remote directory.                            |
+| `lls [path]`           | Lists contents of the local directory.                             |
+| `mkdir <path>`         | Creates a directory on the server.                                 |
+| `lmkdir <path>`        | Creates a directory locally.                                       |
+| `get <remote> [local]` | Downloads a file or directory from the server to the local system. |
+| `put <local> [remote]` | Uploads a file or directory to the server.                         |
 
 ## File/Folder Manifest
 
-- **`fileserver.cpp`**: Implements the server application, including client handling, command parsing, and file operations.
-- **`fileclient.cpp`**: Implements the client application with an interactive REPL for sending commands to the server.
-- **`socket.cpp` / `socket.h`**: Encapsulates socket operations such as `connect`, `bind`, `listen`, `accept`, and data transmission.
-- **`clientparse.cpp` / `clientparse.h`**: Handles command-line argument parsing for the client.
-- **Makefile**: Automates the build process.
+- **`fileserver.cpp`**: Implements the server application, including client handling, command parsing, and file operations. Updates include enhanced security checks for base directory restrictions and improved error messaging for unsupported file types.
+- **`fileclient.cpp`**: Implements the client application with an interactive REPL for sending commands to the server. Added recursive directory handling (`get -R` and `put -R`) and improved error handling for local directory operations.
+- **`socket.cpp`**** / ****`socket.h`**: Provides a `mysock` class to encapsulate socket operations, including connecting, sending, receiving, and managing socket lifecycles. Enhanced with error handling for connection issues and improved clarity in communication functions.
+- **`clientparse.cpp`**** / ****`clientparse.h`**: Parses command-line arguments for the client, including hostname and port. Includes a `struct options` to manage parsed options effectively.
+- **Makefile**: Automates the build process for all executables, with dependencies managed for `fileserver` and `fileclient`. Updated to include multithreading support using `-pthread`.
 
 ## Command Testing Reference
 
@@ -120,16 +120,19 @@ This section outlines the commands we used during the testing phase of the appli
 ### I. Basic Testing
 
 - **Display Help Menu**:
+
   ```
   help
   ```
 
 - **Verify Remote Directory**:
+
   ```
   pwd
   ```
 
 - **Verify Local Directory**:
+
   ```
   lpwd
   ```
@@ -137,21 +140,25 @@ This section outlines the commands we used during the testing phase of the appli
 ### II. Remote Directory Management
 
 - **List Remote Directory Contents**:
+
   ```
   ls
   ```
 
 - **Create a Remote Directory**:
+
   ```
   mkdir testRemoteDir
   ```
 
 - **Change to the New Remote Directory**:
+
   ```
   cd testRemoteDir
   ```
 
 - **Verify Remote Directory Change**:
+
   ```
   pwd
   ```
@@ -159,21 +166,25 @@ This section outlines the commands we used during the testing phase of the appli
 ### III. Local Directory Management
 
 - **List Local Directory Contents**:
+
   ```
   lls
   ```
 
-- **Create a Local Directory**:
+- **Create a Local Directory** (currently not working):
+
   ```
   lmkdir testLocalDir
   ```
 
 - **Change to the New Local Directory**:
+
   ```
   lcd testLocalDir
   ```
 
 - **Verify Local Directory Change**:
+
   ```
   lpwd
   ```
@@ -181,21 +192,25 @@ This section outlines the commands we used during the testing phase of the appli
 ### IV. File Transfer
 
 - **Upload a File to the Remote Directory**:
+
   ```
   put sample.txt testRemoteDir/sample.txt
   ```
 
 - **Download the File Back to Local Directory**:
+
   ```
   get testRemoteDir/sample.txt downloaded_sample.txt
   ```
 
-- **Upload a Local Directory Recursively**: (Does not work in current implemenentation)
+- **Upload a Local Directory Recursively**:
+
   ```
   put -R testLocalDir testRemoteDir/remoteTestDir
   ```
 
-- **Download a Remote Directory Recursively**:  (Does not work in current implemenentation)
+- **Download a Remote Directory Recursively**:
+
   ```
   get -R testRemoteDir/remoteTestDir testLocalDownloadedDir
   ```
@@ -203,16 +218,19 @@ This section outlines the commands we used during the testing phase of the appli
 ### V. Cleaning Up
 
 - **Change to Parent Remote Directory**:
+
   ```
   cd ..
   ```
 
 - **List Remote Directory Contents to Verify Clean-Up**:
+
   ```
   ls
   ```
 
 - **Exit the Application**:
+
   ```
   exit
   ```
@@ -263,10 +281,30 @@ Responses include status messages or file data in plain text, with `EOF` marking
 
 ## Status
 
-The project is fully functional and meets the specified requirements. Known issues:
+The project is almost completly functional and meets the specified requirements. Known issues:
 
 - Error handling for invalid commands can be improved.
 - Limited support for non-ASCII filenames.
 - The client occasionally crashes during recursive uploads and downloads of directories. Restarting the client-side program is required to resume operations.
-- The server displays the shutdown message twice when terminated using `Ctrl+C`.
+
+## Updates and Changes
+
+### Fileserver Updates
+
+- Added checks for restricted file extensions using a predefined list of allowed extensions.
+- Improved directory validation logic to ensure operations remain within the base directory.
+
+### Fileclient Updates
+
+- Implemented robust error handling for recursive operations.
+- Enhanced the REPL loop to provide clear feedback for unsupported commands.
+
+### Socket Enhancements
+
+- Added exception handling for binding and connecting errors.
+- Improved logging for socket operations to facilitate debugging.
+
+### Makefile Updates
+
+- Included the `-pthread`
 
