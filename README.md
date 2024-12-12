@@ -286,6 +286,7 @@ The project is almost completly functional and meets the specified requirements.
 - Error handling for invalid commands can be improved.
 - Limited support for non-ASCII filenames.
 - The client occasionally crashes during recursive uploads and downloads of directories. Restarting the client-side program is required to resume operations.
+- The server displays the shutdown message twice when terminated using `Ctrl+C`. This behavior is non-critical but may confuse users.
 
 ## Updates and Changes
 
@@ -311,21 +312,3 @@ The project is almost completly functional and meets the specified requirements.
 - Included the `-pthread` flag to support multithreading in the server application.
 - Added a new `clean` rule to ensure removal of all temporary and compiled files, improving development workflow.
 - Improved comments to clearly describe each target and its dependencies.
-
-## Known Issues
-- The client occasionally crashes during recursive uploads and downloads of directories. Restarting the client-side program is required to resume operations.
-- The server displays the shutdown message twice when terminated using `Ctrl+C`. This behavior is non-critical but may confuse users.
-- The `lmkdir` command is currently non-functional and will be addressed in a future update.
-
-## Planned Enhancements
-- Add TLS/SSL support to secure communication between the client and server.
-- Implement user authentication and access control to restrict unauthorized file operations.
-- Provide support for non-ASCII filenames to increase compatibility.
-- Enhance the client interface with a graphical user interface (GUI) for better usability.
-
----
-
-This section concludes the updated details for the project. If any further refinements or details are needed, please let me know!
-
-
-
