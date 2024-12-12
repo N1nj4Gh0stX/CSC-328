@@ -311,3 +311,18 @@ The project is almost completly functional and meets the specified requirements.
 - Included the `-pthread` flag to support multithreading in the server application.
 - Added a new `clean` rule to ensure removal of all temporary and compiled files, improving development workflow.
 - Improved comments to clearly describe each target and its dependencies.
+
+## Responsibility List
+
+### Arek Gebka
+- **Fileserver**: Designed and implemented the server-side functionality, including handling multiple clients and recursive file operations.
+- **Documentation**: Authored key sections of the README, including command usage and testing protocols.
+- **Project Manager**: Coordinated tasks, set deadlines, and ensured alignment with project goals.
+- **Debugging**: Contributed to debugging the client implementation, enhancing stability and performance.
+
+### Lizmary Delarosa
+- **Socket and Client Implementation**: Developed the `mysock` class to encapsulate socket functionality and the client-side application, which serves as the project’s core library.
+- **Professor Communication**: Acted as the primary liaison with the professor, ensuring project requirements were clear and expectations were met.
+- **Documentation of Files**: Documented source files comprehensively to ensure maintainability and ease of understanding.
+
+
