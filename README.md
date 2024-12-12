@@ -111,10 +111,111 @@ If used within an academic system, it is recommended to create two dedicated dir
 - **`clientparse.cpp` / `clientparse.h`**: Handles command-line argument parsing for the client.
 - **Makefile**: Automates the build process.
 
-## Responsibility List
+## Command Testing Reference
 
-- **Lizmary Delarosa**: Developed client-side functionality, including parsing, and implemented interactive REPL commands.
-- **Arkadiusz Gebka**: Designed and implemented server-side functionality, including recursive directory handling and file security validations.
+### Overview
+
+This section outlines the commands we used during the testing phase of the application. These commands were designed to verify functionality across different aspects of the client-server system, including directory management, file transfer, and cleanup operations.
+
+### I. Basic Testing
+
+- **Display Help Menu**:
+  ```
+  help
+  ```
+
+- **Verify Remote Directory**:
+  ```
+  pwd
+  ```
+
+- **Verify Local Directory**:
+  ```
+  lpwd
+  ```
+
+### II. Remote Directory Management
+
+- **List Remote Directory Contents**:
+  ```
+  ls
+  ```
+
+- **Create a Remote Directory**:
+  ```
+  mkdir testRemoteDir
+  ```
+
+- **Change to the New Remote Directory**:
+  ```
+  cd testRemoteDir
+  ```
+
+- **Verify Remote Directory Change**:
+  ```
+  pwd
+  ```
+
+### III. Local Directory Management
+
+- **List Local Directory Contents**:
+  ```
+  lls
+  ```
+
+- **Create a Local Directory** (currently not working):
+  ```
+  lmkdir testLocalDir
+  ```
+
+- **Change to the New Local Directory**:
+  ```
+  lcd testLocalDir
+  ```
+
+- **Verify Local Directory Change**:
+  ```
+  lpwd
+  ```
+
+### IV. File Transfer
+
+- **Upload a File to the Remote Directory**:
+  ```
+  put sample.txt testRemoteDir/sample.txt
+  ```
+
+- **Download the File Back to Local Directory**:
+  ```
+  get testRemoteDir/sample.txt downloaded_sample.txt
+  ```
+
+- **Upload a Local Directory Recursively**:
+  ```
+  put -R testLocalDir testRemoteDir/remoteTestDir
+  ```
+
+- **Download a Remote Directory Recursively**:
+  ```
+  get -R testRemoteDir/remoteTestDir testLocalDownloadedDir
+  ```
+
+### V. Cleaning Up
+
+- **Change to Parent Remote Directory**:
+  ```
+  cd ..
+  ```
+
+- **List Remote Directory Contents to Verify Clean-Up**:
+  ```
+  ls
+  ```
+
+- **Exit the Application**:
+  ```
+  exit
+  ```
 
 ## Protocol
 
@@ -167,8 +268,5 @@ The project is fully functional and meets the specified requirements. Known issu
 - Error handling for invalid commands can be improved.
 - Limited support for non-ASCII filenames.
 - The client occasionally crashes during recursive uploads and downloads of directories. Restarting the client-side program is required to resume operations.
-
-## Authors
-
-- Lizmary Delarosa and Arkadiusz Gebka
+- The server displays the shutdown message twice when terminated using `Ctrl+C`.
 
