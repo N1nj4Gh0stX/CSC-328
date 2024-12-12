@@ -1,3 +1,13 @@
+/*************************************************************/
+/* author: Liz Delarosa                                     */
+/* editor: Arek Gebka                                       */
+/* filename: Makefile                                       */
+/* purpose: This Makefile automates the compilation of the  */
+/*          fileserver and fileclient programs. It ensures  */
+/*          the correct compilation order, handles          */
+/*          dependencies, and provides a clean target to    */
+/*          remove generated files.                         */
+/*************************************************************/
 CC = g++
 CFLAGS = -Wall -pthread -std=c++17
 
