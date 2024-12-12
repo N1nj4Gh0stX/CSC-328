@@ -1,8 +1,6 @@
 # File Server and Client Project
 
-## ID Block
-
-**Team Members:**
+## Team members
 
 - Lizmary Delarosa
 - Arkadiusz Gebka
