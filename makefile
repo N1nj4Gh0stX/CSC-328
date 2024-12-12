@@ -1,103 +1,53 @@
-/*************************************************************/
-/* author: Liz Delarosa                                     */
-/* editor: Arek Gebka                                       */
-/* filename: Makefile                                       */
-/* purpose: This Makefile automates the compilation of the  */
-/*          fileserver and fileclient programs. It ensures  */
-/*          the correct compilation order, handles          */
-/*          dependencies, and provides a clean target to    */
-/*          remove generated files.                         */
-/*************************************************************/
+# Author: Liz Delarosa
+# Editor: Arek Gebka
+# Filename: Makefile
+# Purpose: Automates the compilation of the fileserver and fileclient programs.
+#          Ensures proper compilation order, handles dependencies, and provides
+#          a clean target for removing generated files.
 
-/*************************************************************/
-/* Variable: CC                                              */
-/* purpose: Specifies the compiler to use for C++ files.     */
-/* default: g++                                              */
-/*************************************************************/
-
-/*************************************************************/
-/* Variable: CFLAGS                                          */
-/* purpose: Defines the compiler flags for all targets.      */
-/* options:                                                 */
-/*    -Wall: Enables all warnings.                          */
-/*    -pthread: Enables multithreading support.             */
-/*    -std=c++17: Specifies the C++17 standard.             */
-/*************************************************************/
-
-/*************************************************************/
-/* Target: all                                               */
-/* purpose: Builds all executable targets in the project.    */
-/* dependencies: fileserver, fileclient                     */
-/*************************************************************/
-
-/*************************************************************/
-/* Target: fileserver                                        */
-/* purpose: Compiles and links the fileserver executable.    */
-/* dependencies: fileserver.o, socket.o                     */
-/*************************************************************/
-
-/*************************************************************/
-/* Target: fileserver.o                                      */
-/* purpose: Compiles the fileserver.cpp source file into     */
-/*          an object file.                                  */
-/* dependencies: fileserver.cpp                             */
-/*************************************************************/
-
-/*************************************************************/
-/* Target: socket.o                                          */
-/* purpose: Compiles the socket.cpp source file into an      */
-/*          object file.                                     */
-/* dependencies: socket.cpp, socket.h                       */
-/*************************************************************/
-
-/*************************************************************/
-/* Target: fileclient                                        */
-/* purpose: Compiles and links the fileclient executable.    */
-/* dependencies: fileclient.o, clientparse.o, socket.o       */
-/*************************************************************/
-
-/*************************************************************/
-/* Target: fileclient.o                                      */
-/* purpose: Compiles the fileclient.cpp source file into an  */
-/*          object file.                                     */
-/* dependencies: fileclient.cpp                             */
-/*************************************************************/
-
-/*************************************************************/
-/* Target: clientparse.o                                     */
-/* purpose: Compiles the clientparse.cpp source file into an */
-/*          object file.                                     */
-/* dependencies: clientparse.cpp, clientparse.h             */
-/*************************************************************/
-
-/*************************************************************/
-/* Target: clean                                             */
-/* purpose: Removes all generated files, including object    */
-/*          files and executables, to clean the project      */
-/*          directory.                                       */
-/*************************************************************/
+# Compiler to use for building the programs
 CC = g++
+
+# Compiler flags:
+#   -Wall: Enable all warnings
+#   -pthread: Enable multithreading support
+#   -std=c++17: Use the C++17 standard
 CFLAGS = -Wall -pthread -std=c++17
 
+# Default target: Builds all executables
 all: fileserver fileclient
 
+# Target: fileserver
+# Purpose: Compiles and links the fileserver executable
 fileserver: fileserver.o socket.o
 	$(CC) $(CFLAGS) -o fileserver fileserver.o socket.o -lstdc++fs
 
+# Target: fileserver.o
+# Purpose: Compiles the fileserver.cpp source file into an object file
 fileserver.o: fileserver.cpp
 	$(CC) $(CFLAGS) -c fileserver.cpp
 
+# Target: socket.o
+# Purpose: Compiles the socket.cpp source file into an object file
 socket.o: socket.cpp socket.h
 	$(CC) $(CFLAGS) -c socket.cpp
 
+# Target: fileclient
+# Purpose: Compiles and links the fileclient executable
 fileclient: fileclient.o clientparse.o socket.o
 	$(CC) $(CFLAGS) fileclient.o clientparse.o socket.o -lstdc++fs -o fileclient
 
+# Target: fileclient.o
+# Purpose: Compiles the fileclient.cpp source file into an object file
 fileclient.o: fileclient.cpp
 	$(CC) $(CFLAGS) -c fileclient.cpp
 
+# Target: clientparse.o
+# Purpose: Compiles the clientparse.cpp source file into an object file
 clientparse.o: clientparse.h clientparse.cpp
 	$(CC) $(CFLAGS) -c clientparse.cpp
 
+# Target: clean
+# Purpose: Removes all generated files to clean the project directory
 clean:
 	rm -f *.o fileserver fileclient
