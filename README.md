@@ -163,7 +163,7 @@ This section outlines the commands we used during the testing phase of the appli
   lls
   ```
 
-- **Create a Local Directory** (currently not working):
+- **Create a Local Directory**:
   ```
   lmkdir testLocalDir
   ```
