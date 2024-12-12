@@ -1,20 +1,13 @@
 /*************************************************************/
-/* author: []                                                */
-/* filename: server.cpp                                       */
-/* purpose: this source file implements a simple file server */
-/*          that allows clients to interact with the server  */
-/*          through various commands, such as changing        */
-/*          directories, listing files, and transferring files*/
-/*          via a custom protocol. The server listens for     */
-/*          incoming client connections and handles them in   */
-/*          separate processes using `fork`. It supports     */
-/*          commands like `get` (to download a file), `put`   */
-/*          (to upload a file), `cd`, `pwd`, `ls`, `mkdir`,   */
-/*          and `exit`. The server also handles errors and   */
-/*          ensures that only files within the specified     */
-/*          directory can be accessed.                       */
+/* author: Arek Gebka                                       */
+/* filename: fileserver.cpp                                 */
+/* purpose: Implements a simple file server that handles    */
+/*          file and directory commands from a client.      */
+/*          The server supports commands such as file       */
+/*          uploads/downloads, directory navigation, and    */
+/*          listing directory contents, while ensuring all  */
+/*          actions are restricted to a base directory.     */
 /*************************************************************/
-
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -24,6 +17,8 @@
 #include <set>
 #include <cstring>
 #include "socket.h"
+#include <dirent.h>
+#include <sys/stat.h>
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -32,23 +27,37 @@ string base_directory;
 bool shutdown_flag = false;
 
 /*************************************************************/
-/* function: sendallFile                                     */
-/* purpose: sends a file to the client. It reads the file    */
-/*          in chunks and sends the data to the client over  */
-/*          the socket connection. The file is checked to    */
-/*          ensure it is within the base directory before    */
-/*          being sent. The transfer ends with an "EOF"      */
-/*          message.                                         */
-/* parameters:                                               */
-/*    - client: a mysock object representing the client.     */
-/*    - file_path: the path of the file to send.             */
+/* function: isWithinBaseDirectory                          */
+/* purpose: Verifies whether a given file path is within    */
+/*          the allowed base directory to ensure security.  */
+/* parameters:                                              */
+/*    - path: the file or directory path to check.          */
+/*************************************************************/
+bool isWithinBaseDirectory(const fs::path &path) {
+    try {
+        fs::path canonical_base = fs::canonical(base_directory);
+        fs::path canonical_path = fs::weakly_canonical(path);
+        return canonical_path.string().find(canonical_base.string()) == 0;
+    } catch (const fs::filesystem_error &e) {
+        return false;
+    }
+}
+
+/*************************************************************/
+/* function: sendallFile                                    */
+/* purpose: Sends a file to the client in chunks over a     */
+/*          socket connection. Appends an "EOF" marker to   */
+/*          signal the end of the transfer.                 */
+/* parameters:                                              */
+/*    - client: the mysock object representing the client.  */
+/*    - file_path: the path of the file to be sent.         */
 /*************************************************************/
 void sendallFile(mysock &client, const string &file_path) {
-    static set<string> sent_files; // Track sent files for debugging
+    static set<string> sent_files;
     cout << "Invoking sendallFile for: " << file_path << endl;
 
     fs::path absolute_path = fs::absolute(file_path);
-    if (absolute_path.string().find(base_directory) != 0) {
+    if (!isWithinBaseDirectory(absolute_path)) {
         client.clientsend("Error: Access denied.");
         return;
     }
@@ -72,17 +81,21 @@ void sendallFile(mysock &client, const string &file_path) {
 }
 
 /*************************************************************/
-/* function: recvFile                                         */
-/* purpose: receives a file from the client and saves it     */
-/*          to the specified path on the server. It reads    */
-/*          the incoming data in chunks and writes it to a   */
-/*          file. The transfer ends when an "EOF" message is */
-/*          received.                                        */
-/* parameters:                                               */
-/*    - client: a mysock object representing the client.     */
-/*    - file_path: the path to save the received file.       */
+/* function: recvFile                                       */
+/* purpose: Receives a file from the client and writes it   */
+/*          to the server's file system. The operation ends */
+/*          when an "EOF" marker is received.               */
+/* parameters:                                              */
+/*    - client: the mysock object representing the client.  */
+/*    - file_path: the destination path for the file.       */
 /*************************************************************/
 void recvFile(mysock &client, const string &file_path) {
+    fs::path absolute_path = fs::absolute(file_path);
+    if (!isWithinBaseDirectory(absolute_path)) {
+        client.clientsend("Error: Access denied.");
+        return;
+    }
+
     ofstream outfile(file_path, ios::binary);
     if (!outfile) {
         client.clientsend("Error: Cannot create file.");
@@ -102,18 +115,13 @@ void recvFile(mysock &client, const string &file_path) {
 }
 
 /*************************************************************/
-/* function: handleClient                                     */
-/* purpose: processes commands received from a client.       */
-/*          Supports the following commands:                  */
-/*          - exit: disconnects the client.                   */
-/*          - cd: changes the current working directory.      */
-/*          - pwd: returns the current working directory.    */
-/*          - ls: lists the files in the current directory.  */
-/*          - mkdir: creates a new directory.                */
-/*          - get: sends a file from the server to the client.*/
-/*          - put: receives a file from the client.           */
-/* parameters:                                               */
-/*    - client: the mysock object representing the client.   */
+/* function: handleClient                                   */
+/* purpose: Processes commands from the client, such as     */
+/*          file uploads/downloads, directory navigation,   */
+/*          and listing contents. Each command is executed  */
+/*          securely within the base directory.             */
+/* parameters:                                              */
+/*    - client: the mysock object representing the client.  */
 /*************************************************************/
 void handleClient(mysock &client) {
     string current_directory = base_directory;
@@ -126,7 +134,7 @@ void handleClient(mysock &client) {
                 cout << "Error or client disconnected." << endl;
                 break;
             }
-            buffer[receivedBytes] = '\0'; // Null-terminate the string
+            buffer[receivedBytes] = '\0';
             string command(buffer);
 
             cout << "Command received: " << command << endl;
@@ -140,21 +148,24 @@ void handleClient(mysock &client) {
                 break;
             } else if (cmd == "cd") {
                 fs::path target_path = fs::absolute(current_directory + "/" + arg1);
-                if (fs::exists(target_path) && fs::is_directory(target_path) &&
-                    target_path.string().find(base_directory) == 0) {
+                if (!fs::exists(target_path)) {
+                    client.clientsend("Error: Directory does not exist.");
+                } else if (!isWithinBaseDirectory(target_path)) {
+                    client.clientsend("Error: Access denied to restricted directory.");
+                } else if (fs::is_directory(target_path)) {
                     current_directory = target_path.string();
                     client.clientsend("Directory changed to: " + current_directory);
                 } else {
-                    client.clientsend("Error: Invalid directory.");
-                    continue;
+                    client.clientsend("Error: Target is not a directory.");
                 }
+                continue;
             } else if (cmd == "pwd") {
                 client.clientsend(current_directory);
                 continue;
             } else if (cmd == "ls") {
                 fs::path list_path = arg1.empty() ? current_directory : current_directory + "/" + arg1;
-                if (!fs::exists(list_path)) {
-                    client.clientsend("Error: Path does not exist.");
+                if (!fs::exists(list_path) || !isWithinBaseDirectory(list_path)) {
+                    client.clientsend("Error: Path does not exist or access denied.");
                     continue;
                 } else if (fs::is_directory(list_path)) {
                     stringstream response;
@@ -167,32 +178,70 @@ void handleClient(mysock &client) {
                     continue;
                 }
             } else if (cmd == "mkdir") {
-                fs::path dir_path = current_directory + "/" + arg1;
-                if (fs::create_directory(dir_path)) {
-                    client.clientsend("Directory created.");
+                fs::path dir_path = fs::absolute(current_directory + "/" + arg1);
+                if (isWithinBaseDirectory(dir_path)) {
+                    try {
+                        if (fs::create_directory(dir_path)) {
+                            client.clientsend("Directory created.");
+                        } else {
+                            client.clientsend("Error: Directory already exists or cannot be created.");
+                        }
+                    } catch (const fs::filesystem_error &e) {
+                        client.clientsend("Error: " + string(e.what()));
+                    }
                 } else {
-                    client.clientsend("Error: Directory already exists or cannot be created.");
+                    client.clientsend("Error: Access denied.");
+                }
+                continue;
+            } else if (cmd == "lmkdir") {
+                if (arg1.empty()) {
+                    client.clientsend("Error: Directory name not specified.");
+                    continue;
+                }
+                if (mkdir(arg1.c_str(), 0755) == 0) {
+                    client.clientsend("Local directory created: " + arg1);
+                } else {
+                    client.clientsend("Error: Unable to create local directory.");
+                }
+                continue;
+            } else if (cmd == "lls") {
+                DIR *dir = opendir(arg1.empty() ? "." : arg1.c_str());
+                if (dir) {
+                    stringstream response;
+                    struct dirent *entry;
+                    while ((entry = readdir(dir)) != nullptr) {
+                        response << entry->d_name << (entry->d_type == DT_DIR ? "/" : "") << "\n";
+                    }
+                    closedir(dir);
+                    client.clientsend(response.str());
+                } else {
+                    client.clientsend("Error: Unable to list local directory.");
                 }
                 continue;
             } else if (cmd == "get") {
-                cout << "Processing 'get' command for: " << arg1 << endl; // Debug log
+                cout << "Processing 'get' command for: " << arg1 << endl;
                 fs::path target_path = fs::absolute(current_directory + "/" + arg1);
 
-                if (!fs::exists(target_path)) {
-                    client.clientsend("Error: File or directory does not exist.");
+                if (!fs::exists(target_path) || !isWithinBaseDirectory(target_path)) {
+                    client.clientsend("Error: File or directory does not exist or access denied.");
                     continue;
                 }
 
                 if (fs::is_regular_file(target_path)) {
                     sendallFile(client, target_path.string());
-                    cout << "File sent: " << target_path.string() << endl; // Log the file transfer
-                    client.clientsend("EOF"); // Explicitly signal the end of transfer
+                    cout << "File sent: " << target_path.string() << endl;
+                    client.clientsend("EOF");
                 } else {
                     client.clientsend("Error: Specified path is not a file.");
                     continue;
                 }
             } else if (cmd == "put") {
                 fs::path target_path = fs::absolute(current_directory + "/" + arg1);
+
+                if (!isWithinBaseDirectory(target_path)) {
+                    client.clientsend("Error: Access denied.");
+                    continue;
+                }
 
                 if (fs::exists(target_path)) {
                     client.clientsend("Warning: File already exists. Overwriting.");
@@ -201,7 +250,7 @@ void handleClient(mysock &client) {
 
                 recvFile(client, target_path.string());
                 client.clientsend("File received: " + target_path.string());
-                cout << "File uploaded: " << target_path.string() << endl; // Log the upload
+                cout << "File uploaded: " << target_path.string() << endl;
             } else {
                 client.clientsend("Error: Unknown command.");
                 continue;
@@ -213,11 +262,11 @@ void handleClient(mysock &client) {
 }
 
 /*************************************************************/
-/* function: signalHandler                                    */
-/* purpose: handles termination signals (e.g., SIGINT) to     */
-/*          gracefully shut down the server.                   */
-/* parameters:                                               */
-/*    - signal: the signal that was received.                 */
+/* function: signalHandler                                  */
+/* purpose: Handles SIGINT signals to gracefully shut down  */
+/*          the server after a delay.                       */
+/* parameters:                                              */
+/*    - signal: the signal number received.                 */
 /*************************************************************/
 void signalHandler(int signal) {
     if (signal == SIGINT) {
@@ -229,16 +278,15 @@ void signalHandler(int signal) {
 }
 
 /*************************************************************/
-/* function: main                                             */
-/* purpose: initializes the server, binds it to a port,      */
-/*          and listens for incoming client connections.      */
-/*          It processes incoming connections and handles    */
-/*          them in separate processes using fork.           */
-/* parameters:                                               */
-/*    - argc: the number of command-line arguments.          */
-/*    - argv: the command-line arguments.                    */
-/* exception: throws runtime errors if arguments are missing*/
-/*           or invalid.                                      */
+/* function: main                                           */
+/* purpose: The entry point for the server application.     */
+/*          Initializes the server, binds to a specified    */
+/*          port, and sets the base directory for file      */
+/*          operations. Handles incoming client connections */
+/*          and spawns child processes for each client.     */
+/* parameters:                                              */
+/*    - argc: the number of command-line arguments.         */
+/*    - argv: the array of command-line arguments.          */
 /*************************************************************/
 int main(int argc, char **argv) {
     if (argc != 5) {
@@ -282,7 +330,7 @@ int main(int argc, char **argv) {
         mysock client = server.accept();
         cout << "Client connected." << endl;
 
-        if (fork() == 0) { // Handle each client in a new process
+        if (fork() == 0) {
             server.close();
             handleClient(client);
             client.close();
