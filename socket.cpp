@@ -1,15 +1,15 @@
-/*************************************************************/
-/* author: []                                                 */
-/* filename: socket.cpp                                       */
-/* purpose: this source file implements the mysock class,    */
-/*          which provides socket functionality for          */
-/*          client-server communication. it defines methods   */
-/*          for connecting to a server, sending and receiving*/
-/*          data, binding to a port, listening for incoming  */
-/*          connections, and closing the socket.             */
-/*          the methods utilize system calls such as socket, */
-/*          connect, send, and recv to manage communication. */
-/*************************************************************/
+/*****************************************************************/
+/* authors Arek Gebka and Lizmary Delarosa                       */
+/* filename: socket.cpp                                          */
+/* purpose: this source file implements the mysock class,        */
+/*          which provides socket functionality for              */
+/*          client-server communication. it defines methods      */
+/*          for connecting to a server, sending and receiving    */
+/*          data, binding to a port, listening for incoming      */
+/*          connections, and closing the socket.                 */
+/*          the methods utilize system calls such as socket,     */
+/*          connect, send, and recv to manage communication.     */
+/*****************************************************************/
 #include "socket.h"
 #include <stdexcept>
 #include <cstring>
