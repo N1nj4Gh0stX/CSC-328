@@ -1,5 +1,12 @@
-/*************************************************************/
-/* author: Arek Gebka                                       */
+/************************************************************/
+/* Author: Arek Gebka                                       */
+/* Editor: Lizmary Delarosa                                 */
+/* Major: Computer Science                                  */
+/* Creation Date: November 11, 2024                         */
+/* Due Date: November 15, 2024                              */
+/* Course: CPSC 328                                         */
+/* Professor Name: Dr. Dylan Schwesinger                    */
+/* Assignment: Network Program Implementation               */
 /* filename: fileserver.cpp                                 */
 /* purpose: Implements a secure file server that handles    */
 /*          file and directory commands from a client.      */
@@ -8,6 +15,29 @@
 /*          listing directory contents, while ensuring all  */
 /*          actions are restricted to a base directory.     */
 /*************************************************************/
+/* Citations:                                                */
+/* [1] Linux Man Pages, "socket(2) - Linux manual page,"     */
+/*     https://man7.org/linux/man-pages/man2/socket.2.html   */
+/* [2] Brian "Beej" Hall, "Beej's Guide to Network           */
+/*     Programming," https://beej.us/guide/bgnet/            */
+/* [3] cppreference.com, "C++ Standard Library reference,"   */
+/*     https://en.cppreference.com/w/                        */
+/* [4] cplusplus.com, "std::filesystem - C++ Reference,"     */
+/*     https://cplusplus.com/reference/filesystem/           */
+/* [5] Linux Man Pages, "fork(2) - Linux manual page,"       */
+/*     https://man7.org/linux/man-pages/man2/fork.2.html     */
+/* [6] W. Richard Stevens, "UNIX Network Programming,"       */
+/*     Prentice Hall, 2003.                                  */
+/* [7] Dr. Dylan Schwesinger, Server Project Solutions       */
+/*     and examples in CPSC 328 course materials.            */
+/* [8] Arek Gebka, "webserver.c" and other files for         */
+/*     solutions to Projects 4 and 6 of CPSC 328 course."    */
+/* [9] Liz Delarosa, "webserver.c" and other files for       */
+/*     solutions to Projects 4 and 6 of CPSC 328 course."    */
+/* [10] Stack Overflow, "Common practices for secure file    */
+/*      servers," https://stackoverflow.com/                 */
+/*************************************************************/
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
