@@ -1,10 +1,36 @@
 /*************************************************************/
 /* Author: Lizmary Delarosa                                  */
-/* Filename: client.cpp                                       */
+/* Editor: Arek Gebka                                 	     */
+/* Major: Computer Science                                  */
+/* Creation Date: November 11, 2024                         */
+/* Due Date: November 15, 2024                              */
+/* Course: CPSC 328                                         */
+/* Professor Name: Dr. Dylan Schwesinger                    */
+/* Assignment: Network Program Implementation               */
+/* filename: fileserver.cpp                                    */
 /* Purpose: This file implements the client-side of the file */
 /*          transfer program using sockets. It includes       */
 /*          functions for sending and receiving files,       */
 /*          handling directories, and executing commands.    */
+/*************************************************************/
+/*************************************************************/
+/* Citations:                                                */
+/* [1] Linux Man Pages, "socket(2) - Linux manual page,"     */
+/*     https://man7.org/linux/man-pages/man2/socket.2.html   */
+/* [2] Brian "Beej" Hall, "Beej's Guide to Network           */
+/*     Programming," https://beej.us/guide/bgnet/            */
+/* [3] cppreference.com, "C++ Standard Library reference,"   */
+/*     https://en.cppreference.com/w/                        */
+/* [4] cplusplus.com, "std::filesystem - C++ Reference,"     */
+/*     https://cplusplus.com/reference/filesystem/           */
+/* [6] W. Richard Stevens, "UNIX Network Programming,"       */
+/*     Prentice Hall, 2003.                                  */
+/* [7] Dr. Dylan Schwesinger, Server Project Solutions       */
+/*     and examples in CPSC 328 course materials.            */
+/* [8] Arek Gebka, "webclient.c" and other files for         */
+/*     solutions to Projects 3 and 5 of CPSC 328 course."    */
+/* [9] Lizmary Delarosa, "webclient.c" and other files for   */
+/*     solutions to Projects 3 and 5 of CPSC 328 course."    */
 /*************************************************************/
 
 #include <stdio.h>
