@@ -32,7 +32,7 @@
 /*     and examples in CPSC 328 course materials.            */
 /* [8] Arek Gebka, "webserver.c" and other files for         */
 /*     solutions to Projects 4 and 6 of CPSC 328 course."    */
-/* [9] Liz Delarosa, "webserver.c" and other files for       */
+/* [9] Lizmary Delarosa, "webserver.c" and other files for   */
 /*     solutions to Projects 4 and 6 of CPSC 328 course."    */
 /* [10] Stack Overflow, "Common practices for secure file    */
 /*      servers," https://stackoverflow.com/                 */
