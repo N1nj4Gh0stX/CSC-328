@@ -1,4 +1,4 @@
-# File Server and Client Project
+# CSC 328 - File Server and Client Project
 
 ## ID Block
 
