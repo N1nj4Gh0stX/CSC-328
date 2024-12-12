@@ -1,13 +1,12 @@
 /*************************************************************/
-/* author: Liz Delarosa                                      */
-/* filename: client.cpp                                      */
-/* purpose: this source file implements the client-side      */
-/*          logic for communicating with the server. The     */
-/*          client sends commands to the server to interact  */
-/*          with files, change directories, and receive or   */
-/*          upload files. It supports commands like `exit`,  */
-/*          `cd`, `pwd`, `ls`, `mkdir`, `get`, and `put`.    */
+/* Author: Lizmary Delarosa                                  */
+/* Filename: client.cpp                                       */
+/* Purpose: This file implements the client-side of the file */
+/*          transfer program using sockets. It includes       */
+/*          functions for sending and receiving files,       */
+/*          handling directories, and executing commands.    */
 /*************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -24,24 +23,23 @@
 #include <sys/stat.h>
 #include <stack>
 #include <filesystem>
-#include <thread>
 
 #include "clientparse.h"
 #include "socket.h"
+
+// Define default buffer size for file transfer
+constexpr size_t DEFAULT_BUFFER_SIZE = 4096;
 
 using namespace std;
 namespace fs = std::filesystem;
 
 /*************************************************************/
-/* function: recvallFile                                     */
-/* purpose: Receives a file in chunks from the server over   */
-/*          a socket connection and writes it to the local   */
-/*          file system. The transfer concludes when an      */
-/*          "EOF" message is detected.                       */
-/* parameters:                                               */
-/*    - s: the mysock object representing the server socket. */
-/*    - local_file_path: the path where the file will be     */
-/*          stored locally.                                  */
+/* Function: recvallFile                                      */
+/* Purpose: Receives the entire contents of a file from the  */
+/*          server and writes it to a local file.            */
+/* Input: s - The socket object used for communication.      */
+/*        local_file_path - The path to the local file where*/
+/*        the received file will be saved.                   */
 /*************************************************************/
 void recvallFile(mysock &s, const string &local_file_path) {
     ofstream outFile(local_file_path, ios::binary);
@@ -51,7 +49,7 @@ void recvallFile(mysock &s, const string &local_file_path) {
         return;
     }
 
-    char buffer[1024];
+    char buffer[DEFAULT_BUFFER_SIZE];
     while (true) {
         int receivedBytes = s.clientrecv(buffer, sizeof(buffer));
         if (receivedBytes <= 0) {
@@ -78,40 +76,27 @@ void recvallFile(mysock &s, const string &local_file_path) {
 }
 
 /*************************************************************/
-/* function: asyncRecvallFile                                */
-/* purpose: Initiates an asynchronous file download by       */
-/*          spawning a detached thread to handle the         */
-/*          recvallFile operation.                          */
-/* parameters:                                               */
-/*    - s: the mysock object representing the server socket. */
-/*    - local_file_path: the path where the file will be     */
-/*          stored locally.                                  */
-/*************************************************************/
-void asyncRecvallFile(mysock &s, const string &local_file_path) {
-    thread t(recvallFile, ref(s), ref(local_file_path));
-    t.detach();
-}
-
-/*************************************************************/
-/* function: getRecursive                                    */
-/* purpose: Downloads a remote directory recursively by      */
-/*          creating local directories and downloading       */
-/*          files sent by the server. The directory          */
-/*          structure is preserved locally.                  */
-/* parameters:                                               */
-/*    - s: the mysock object representing the server socket. */
-/*    - remote_path: the remote directory to download.       */
-/*    - local_path: the local directory to store files.      */
+/* Function: getRecursive                                     */
+/* Purpose: Recursively retrieves a directory and its files */
+/*          from the server and saves them locally.          */
+/* Input: s - The socket object used for communication.      */
+/*        remote_path - The path to the remote directory to  */
+/*        be retrieved.                                      */
+/*        local_path - The local path where the directory    */
+/*        and files will be saved.                           */
 /*************************************************************/
 void getRecursive(mysock &s, const string &remote_path, const string &local_path) {
+    // Send the recursive get request to the server
     s.clientsend("get -R " + remote_path);
 
-    char response_buffer[1024];
+    char response_buffer[DEFAULT_BUFFER_SIZE];
     int receivedBytes;
 
+    // Process server responses
     while ((receivedBytes = s.clientrecv(response_buffer, sizeof(response_buffer))) > 0) {
         string response(response_buffer, receivedBytes);
 
+        // End of directory listing
         if (response == "EOF") {
             cout << "Server signaled end of directory listing." << endl;
             break;
@@ -124,94 +109,80 @@ void getRecursive(mysock &s, const string &remote_path, const string &local_path
         string local_file_path = local_path + "/" + relative_path;
 
         if (type == "DIR") {
+            // Create the corresponding local directory
             try {
                 fs::create_directories(local_file_path);
                 cout << "Directory created: " << local_file_path << endl;
             } catch (const fs::filesystem_error &e) {
                 cerr << "Error creating local directory: " << e.what() << endl;
-                continue;
+                continue; // Skip to the next item
             }
         } else if (type == "FILE") {
+            // Fetch the file from the server
             cout << "Fetching file: " << relative_path << " -> " << local_file_path << endl;
             s.clientsend("get " + relative_path);
-            asyncRecvallFile(s, local_file_path);
+            recvallFile(s, local_file_path); // Corrected call
         } else {
             cerr << "Unknown type received: " << type << endl;
-            continue;
+            continue; // Skip invalid responses
         }
     }
 
+    // Detect socket closure or end of response
     if (receivedBytes <= 0) {
-        cerr << "Error: Connection to the server lost or server closed unexpectedly." << endl;
+        cerr << "Error: Connection lost or server closed unexpectedly." << endl;
     }
 
     cout << "Directory download complete: " << local_path << endl;
 }
 
 /*************************************************************/
-/* function: asyncPutFile                                    */
-/* purpose: Initiates an asynchronous file upload by         */
-/*          spawning a detached thread to send the file to   */
-/*          the server in chunks, concluding with an "EOF"   */
-/*          message.                                         */
-/* parameters:                                               */
-/*    - s: the mysock object representing the server socket. */
-/*    - local_file_path: the local file path to upload.      */
-/*    - remote_file_path: the remote path on the server.     */
-/*************************************************************/
-void asyncPutFile(mysock &s, const string &local_file_path, const string &remote_file_path) {
-    thread t([&]() {
-        ifstream infile(local_file_path, ios::binary);
-        if (!infile.is_open()) {
-            cerr << "Error opening local file: " << local_file_path << endl;
-            return;
-        }
-
-        s.clientsend("put " + remote_file_path);
-        char buffer[1024];
-        while (infile.read(buffer, sizeof(buffer))) {
-            s.clientsend(string(buffer, infile.gcount()));
-        }
-        infile.close();
-        s.clientsend("EOF");
-        cout << "File uploaded: " << local_file_path << " -> " << remote_file_path << endl;
-    });
-    t.detach();
-}
-
-/*************************************************************/
-/* function: putRecursive                                    */
-/* purpose: Uploads a local directory recursively to the     */
-/*          server by creating remote directories and        */
-/*          uploading files while preserving directory       */
-/*          structure.                                       */
-/* parameters:                                               */
-/*    - s: the mysock object representing the server socket. */
-/*    - local_path: the local directory to upload.           */
-/*    - remote_path: the remote directory path on the server.*/
+/* Function: putRecursive                                    */
+/* Purpose: Recursively uploads a directory and its files   */
+/*          to the server.                                   */
+/* Input: s - The socket object used for communication.      */
+/*        local_path - The path to the local directory to    */
+/*        be uploaded.                                       */
+/*        remote_path - The path to the remote directory.    */
 /*************************************************************/
 void putRecursive(mysock &s, const string &local_path, const string &remote_path) {
+    // Ensure the remote directory exists
     s.clientsend("mkdir " + remote_path);
-    char buffer[1024];
+    char buffer[DEFAULT_BUFFER_SIZE];
     int receivedBytes = s.clientrecv(buffer, sizeof(buffer));
 
     string response(buffer, receivedBytes);
     if (response == "Error") {
-        cerr << "Error creating remote directory: " << remote_path << endl;
+        cout << "Error creating remote directory: " << remote_path << endl;
         return;
     }
 
+    // Iterate through the local directory structure
     for (const auto &entry : fs::recursive_directory_iterator(local_path)) {
         string local_file_path = entry.path().string();
         string relative_path = fs::relative(entry.path(), local_path).string();
         string remote_file_path = remote_path + "/" + relative_path;
 
         if (entry.is_directory()) {
+            // Create the corresponding remote directory
             s.clientsend("mkdir " + remote_file_path);
-            s.clientrecv(buffer, sizeof(buffer));
+            s.clientrecv(buffer, sizeof(buffer)); // Ignore mkdir response
             cout << "Remote directory created: " << remote_file_path << endl;
         } else if (entry.is_regular_file()) {
-            asyncPutFile(s, local_file_path, remote_file_path);
+            // Upload the file
+            ifstream infile(local_file_path, ios::binary);
+            if (!infile.is_open()) {
+                cout << "Error opening local file: " << local_file_path << endl;
+                continue;
+            }
+
+            s.clientsend("put " + remote_file_path);
+            while (infile.read(buffer, sizeof(buffer))) {
+                s.clientsend(string(buffer, infile.gcount()));
+            }
+            infile.close();
+            s.clientsend("EOF");
+            cout << "File uploaded: " << local_file_path << " -> " << remote_file_path << endl;
         } else {
             cout << "Skipping unsupported file type: " << local_file_path << endl;
         }
@@ -221,10 +192,8 @@ void putRecursive(mysock &s, const string &local_path, const string &remote_path
 }
 
 /*************************************************************/
-/* function: printLocalWorkingDirectory                      */
-/* purpose: Prints the current working directory of the      */
-/*          client to the console.                           */
-/* parameters: None                                          */
+/* Function: printLocalWorkingDirectory                      */
+/* Purpose: Prints the current local working directory.      */
 /*************************************************************/
 void printLocalWorkingDirectory() {
 	char cwd[PATH_MAX]; // PATH_MAX is the maximum length for paths
@@ -237,10 +206,9 @@ void printLocalWorkingDirectory() {
 }
 
 /*************************************************************/
-/* function: displayHelp                                     */
-/* purpose: Displays a list of available commands and their  */
-/*          descriptions to the console.                     */
-/* parameters: None                                          */
+/* Function: displayHelp                                      */
+/* Purpose: Displays a list of available commands and their   */
+/*          descriptions to help the user.                    */
 /*************************************************************/
 void displayHelp() {
 	cout << "Available commands:\n"
@@ -259,38 +227,11 @@ void displayHelp() {
 }
 
 /*************************************************************/
-/* function: handleServerMessage                             */
-/* purpose: Processes messages received from the server,     */
-/*          handling special cases like server shutdown      */
-/*          notifications, and prints the messages.          */
-/* parameters:                                               */
-/*    - response: the message received from the server.      */
-/*    - receivedBytes: the size of the received message.     */
-/*************************************************************/
-void handleServerMessage(const char *response, int receivedBytes) {
-    string server_message(response, receivedBytes);
-
-    if (server_message.find("Server will shut down in 5 seconds.") != string::npos) {
-        cout << server_message << endl;
-        cout << "Client will shut down in 5 seconds..." << endl;
-        sleep(5);
-        exit(0); // Graceful exit
-    }
-
-    // Otherwise, just print the server's message
-    cout << server_message << endl;
-}
-
-/*************************************************************/
-/* function: main                                            */
-/* purpose: Entry point for the client program. Initializes  */
-/*          the client socket connection and handles the     */
-/*          command-line interface for interacting with the  */
-/*          server, processing commands like `exit`, `cd`,   */
-/*          `get`, `put`, and others.                        */
-/* parameters:                                               */
-/*    - argc: the number of command-line arguments.          */
-/*    - argv: the array of command-line arguments.           */
+/* Main Function:                                              */
+/* Purpose: Main entry point of the client program. This      */
+/*          function handles user commands, interacts with    */
+/*          the server, and manages file and directory        */
+/*          transfers.                                        */
 /*************************************************************/
 int main(int argc, char **argv) {
     struct options o = parsemenu(argc, argv);
@@ -319,166 +260,86 @@ int main(int argc, char **argv) {
             s.clientsend("exit");
             cout << "Exiting...\n";
             break;
-        }
-
-        try {
-            if (command == "lcd") {
-                if (argument.empty()) {
-                    argument = getenv("HOME"); // Default to home directory
-                }
-                if (chdir(argument.c_str()) == 0) {
-                    cout << "Local directory changed to: " << argument << endl;
-                } else {
-                    perror("Error changing local directory");
-                }
-            } else if (command == "lpwd") {
-                printLocalWorkingDirectory();
-            } else if (command == "lls") {
-                if (argument.empty()) {
-                    argument = "."; // Default to current directory
-                }
-
-                DIR *dir = opendir(argument.c_str());
-                if (dir) {
-                    struct dirent *entry;
-                    while ((entry = readdir(dir)) != nullptr) {
-                        cout << entry->d_name << endl;
-                    }
-                    closedir(dir);
-                } else {
-                    perror("Error listing local directory");
-                }
-            } else if (command == "lmkdir") {
-                if (argument.empty()) {
-                    cout << "Error: Path not specified." << endl;
-                } else {
-                    if (mkdir(argument.c_str(), 0755) == 0) {
-                        cout << "Local directory created: " << argument << endl;
-                    } else {
-                        perror("Error creating local directory");
-                    }
-                }
-            } else if (command == "help") {
-                displayHelp();
-            } else if (command == "cd") {
-                s.clientsend("cd " + argument);
-                char response[1024];
-                int receivedBytes = s.clientrecv(response, sizeof(response));
-                if (receivedBytes <= 0) {
-                    cerr << "Error: Connection to the server lost during 'cd' command." << endl;
-                    break;
-                }
-                handleServerMessage(response, receivedBytes);
-            } else if (command == "pwd") {
-                s.clientsend("pwd");
-                char response[1024];
-                int receivedBytes = s.clientrecv(response, sizeof(response));
-                if (receivedBytes <= 0) {
-                    cerr << "Error: Connection to the server lost during 'pwd' command." << endl;
-                    break;
-                }
-                handleServerMessage(response, receivedBytes);
-            } else if (command == "ls") {
-                s.clientsend("ls " + argument);
-                char response[1024];
-                int receivedBytes = s.clientrecv(response, sizeof(response));
-                if (receivedBytes <= 0) {
-                    cerr << "Error: Connection lost to the server during 'ls' command." << endl;
-                    break;
-                }
-                handleServerMessage(response, receivedBytes);
-            } else if (command == "mkdir") {
-                s.clientsend("mkdir " + argument);
-                char response[1024];
-                int receivedBytes = s.clientrecv(response, sizeof(response));
-                if (receivedBytes <= 0) {
-                    cerr << "Error: Connection lost to the server during 'mkdir' command." << endl;
-                    break;
-                }
-                handleServerMessage(response, receivedBytes);
-            } else if (command == "get") {
-                size_t flag_pos = argument.find("-R");
-                bool recursive = (flag_pos != string::npos);
-
-                if (recursive) {
-                    remote_path = argument.substr(flag_pos + 3); // Skip the `-R` flag
-                    local_path = remote_path;
-                } else {
-                    remote_path = argument;
-                    local_path = argument;
-                }
-
-                size_t space_pos = remote_path.find_last_of(' ');
-                if (space_pos != string::npos) {
-                    local_path = remote_path.substr(space_pos + 1);
-                    remote_path = remote_path.substr(0, space_pos);
-                }
-
-                if (remote_path.empty()) {
-                    cout << "Error: Remote path not specified.\n";
-                    continue;
-                }
-
-                if (recursive) {
-                    getRecursive(s, remote_path, local_path);
-                } else {
-                    s.clientsend("get " + remote_path);
-                    recvallFile(s, local_path);
-                }
-            } else if (command == "put") {
-                size_t flag_pos = argument.find("-R");
-                bool recursive = (flag_pos != string::npos);
-
-                if (recursive) {
-                    local_path = argument.substr(flag_pos + 3); // Skip `-R`
-                    remote_path = local_path;
-                } else {
-                    local_path = argument;
-                    remote_path = argument;
-                }
-
-                size_t space_pos = local_path.find_last_of(' ');
-                if (space_pos != string::npos) {
-                    remote_path = local_path.substr(space_pos + 1);
-                    local_path = local_path.substr(0, space_pos);
-                }
-
-                if (local_path.empty()) {
-                    cout << "Error: Local path not specified.\n";
-                    continue;
-                }
-
-                if (fs::is_directory(local_path)) {
-                    if (recursive) {
-                        putRecursive(s, local_path, remote_path);
-                    } else {
-                        cout << "Error: Local path is a directory. Use -R for recursive upload.\n";
-                    }
-                } else if (fs::is_regular_file(local_path)) {
-                    s.clientsend("put " + remote_path);
-                    ifstream infile(local_path, ios::binary);
-                    char buffer[1024];
-                    while (infile.read(buffer, sizeof(buffer))) {
-                        s.clientsend(string(buffer, infile.gcount()));
-                    }
-                    infile.close();
-                    s.clientsend("EOF");
-                    cout << "File uploaded: " << local_path << " -> " << remote_path << endl;
-                } else {
-                    cout << "Error: Invalid local path.\n";
-                }
-            } else {
-                cout << "Error: Unknown command." << endl;
+        } else if (command == "lcd") {
+            if (argument.empty()) {
+                argument = getenv("HOME"); // Default to home directory
             }
-        } catch (const exception &e) {
-            cerr << "Error: " << e.what() << endl;
-            break;
+            if (chdir(argument.c_str()) == 0) {
+                cout << "Local directory changed to: " << argument << endl;
+            } else {
+                perror("Error changing local directory");
+            }
+        } else if (command == "lpwd") {
+            printLocalWorkingDirectory();
+        } else if (command == "help") {
+            displayHelp();
+        } else if (command == "cd") {
+            s.clientsend("cd " + argument);
+            char response[DEFAULT_BUFFER_SIZE];
+            int receivedBytes = s.clientrecv(response, sizeof(response));
+            cout << string(response, receivedBytes) << endl;
+        } else if (command == "pwd") {
+            s.clientsend("pwd");
+            char response[DEFAULT_BUFFER_SIZE];
+            int receivedBytes = s.clientrecv(response, sizeof(response));
+            cout << "Remote directory: " << string(response, receivedBytes) << endl;
+        } else if (command == "lls") {
+            // Handle local ls
+            DIR *dir = opendir(argument.empty() ? "." : argument.c_str());
+            if (dir) {
+                struct dirent *entry;
+                while ((entry = readdir(dir)) != nullptr) {
+                    cout << entry->d_name << (entry->d_type == DT_DIR ? "/" : "") << "\n";
+                }
+                closedir(dir);
+            } else {
+                perror("Error listing local directory");
+            }
+        } else if (command == "ls") {
+            s.clientsend("ls " + argument);
+            char response[DEFAULT_BUFFER_SIZE];
+            int receivedBytes = s.clientrecv(response, sizeof(response));
+            cout << string(response, receivedBytes) << endl;
+        } else if (command == "mkdir") {
+            s.clientsend("mkdir " + argument);
+            char response[DEFAULT_BUFFER_SIZE];
+            int receivedBytes = s.clientrecv(response, sizeof(response));
+            cout << string(response, receivedBytes) << endl;
+        } else if (command == "lmkdir") {
+            if (argument.empty()) {
+                cout << "Error: Directory name not specified.\n";
+                continue;
+            }
+            // Attempt to create the directory
+            if (mkdir(argument.c_str(), 0755) == 0) {
+                cout << "Directory created: " << argument << endl;
+            } else {
+                perror("Error creating directory");
+            }
+        } else if (command == "put") {
+            size_t position = argument.find(" -R");
+            if (position != string::npos) {
+                local_path = argument.substr(0, position);
+                remote_path = argument.substr(position + 4);
+                putRecursive(s, local_path, remote_path);
+            } else {
+                s.clientsend("put " + argument);
+                // Implement the file sending functionality here
+            }
+        } else if (command == "get") {
+            size_t position = argument.find(" -R");
+            if (position != string::npos) {
+                local_path = argument.substr(position + 4);
+                remote_path = argument.substr(0, position);
+                getRecursive(s, remote_path, local_path);
+            } else {
+                recvallFile(s, argument); // Fetch single file
+            }
+        } else {
+            cout << "Unknown command: " << command << endl;
         }
     }
 
     s.close();
-    cout << "Client will be terminated in 5 seconds." << endl;
-    sleep(5);
     return 0;
 }
-
