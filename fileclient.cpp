@@ -1,7 +1,7 @@
 /*************************************************************/
-/* author: Liz Delarosa                                                 */
-/* filename: client.cpp                                       */
-/* purpose: this source file implements the client-side     */
+/* author: Liz Delarosa                                      */
+/* filename: client.cpp                                      */
+/* purpose: this source file implements the client-side      */
 /*          logic for communicating with the server. The     */
 /*          client sends commands to the server to interact  */
 /*          with files, change directories, and receive or   */
