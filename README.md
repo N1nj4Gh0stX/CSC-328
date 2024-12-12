@@ -190,12 +190,12 @@ This section outlines the commands we used during the testing phase of the appli
   get testRemoteDir/sample.txt downloaded_sample.txt
   ```
 
-- **Upload a Local Directory Recursively**:
+- **Upload a Local Directory Recursively**: (Does not work in current implemenentation)
   ```
   put -R testLocalDir testRemoteDir/remoteTestDir
   ```
 
-- **Download a Remote Directory Recursively**:
+- **Download a Remote Directory Recursively**:  (Does not work in current implemenentation)
   ```
   get -R testRemoteDir/remoteTestDir testLocalDownloadedDir
   ```
