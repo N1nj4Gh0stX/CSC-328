@@ -7,7 +7,7 @@
 /* Course: CPSC 328                                         */
 /* Professor Name: Dr. Dylan Schwesinger                    */
 /* Assignment: Network Program Implementation               */
-/* filename: fileserver.cpp                                    */
+/* filename: fileclient.cpp                                    */
 /* Purpose: This file implements the client-side of the file */
 /*          transfer program using sockets. It includes       */
 /*          functions for sending and receiving files,       */
