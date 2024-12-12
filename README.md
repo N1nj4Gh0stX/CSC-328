@@ -171,7 +171,7 @@ This section outlines the commands we used during the testing phase of the appli
   lls
   ```
 
-- **Create a Local Directory** (currently not working):
+- **Create a Local Directory**
 
   ```
   lmkdir testLocalDir
@@ -203,13 +203,13 @@ This section outlines the commands we used during the testing phase of the appli
   get testRemoteDir/sample.txt downloaded_sample.txt
   ```
 
-- **Upload a Local Directory Recursively**:
+- **Upload a Local Directory Recursively**: (currently not working):
 
   ```
   put -R testLocalDir testRemoteDir/remoteTestDir
   ```
 
-- **Download a Remote Directory Recursively**:
+- **Download a Remote Directory Recursively**: (currently not working):
 
   ```
   get -R testRemoteDir/remoteTestDir testLocalDownloadedDir
