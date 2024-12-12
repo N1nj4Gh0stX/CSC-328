@@ -1,3 +1,20 @@
+/*************************************************************/
+/* author: []                                                */
+/* filename: server.cpp                                       */
+/* purpose: this source file implements a simple file server */
+/*          that allows clients to interact with the server  */
+/*          through various commands, such as changing        */
+/*          directories, listing files, and transferring files*/
+/*          via a custom protocol. The server listens for     */
+/*          incoming client connections and handles them in   */
+/*          separate processes using `fork`. It supports     */
+/*          commands like `get` (to download a file), `put`   */
+/*          (to upload a file), `cd`, `pwd`, `ls`, `mkdir`,   */
+/*          and `exit`. The server also handles errors and   */
+/*          ensures that only files within the specified     */
+/*          directory can be accessed.                       */
+/*************************************************************/
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -14,6 +31,18 @@ namespace fs = std::filesystem;
 string base_directory;
 bool shutdown_flag = false;
 
+/*************************************************************/
+/* function: sendallFile                                     */
+/* purpose: sends a file to the client. It reads the file    */
+/*          in chunks and sends the data to the client over  */
+/*          the socket connection. The file is checked to    */
+/*          ensure it is within the base directory before    */
+/*          being sent. The transfer ends with an "EOF"      */
+/*          message.                                         */
+/* parameters:                                               */
+/*    - client: a mysock object representing the client.     */
+/*    - file_path: the path of the file to send.             */
+/*************************************************************/
 void sendallFile(mysock &client, const string &file_path) {
     static set<string> sent_files; // Track sent files for debugging
     cout << "Invoking sendallFile for: " << file_path << endl;
@@ -42,8 +71,17 @@ void sendallFile(mysock &client, const string &file_path) {
     cout << "File sent: " << file_path << endl;
 }
 
-
-
+/*************************************************************/
+/* function: recvFile                                         */
+/* purpose: receives a file from the client and saves it     */
+/*          to the specified path on the server. It reads    */
+/*          the incoming data in chunks and writes it to a   */
+/*          file. The transfer ends when an "EOF" message is */
+/*          received.                                        */
+/* parameters:                                               */
+/*    - client: a mysock object representing the client.     */
+/*    - file_path: the path to save the received file.       */
+/*************************************************************/
 void recvFile(mysock &client, const string &file_path) {
     ofstream outfile(file_path, ios::binary);
     if (!outfile) {
@@ -63,8 +101,20 @@ void recvFile(mysock &client, const string &file_path) {
     cout << "File received: " << file_path << endl;
 }
 
-
-
+/*************************************************************/
+/* function: handleClient                                     */
+/* purpose: processes commands received from a client.       */
+/*          Supports the following commands:                  */
+/*          - exit: disconnects the client.                   */
+/*          - cd: changes the current working directory.      */
+/*          - pwd: returns the current working directory.    */
+/*          - ls: lists the files in the current directory.  */
+/*          - mkdir: creates a new directory.                */
+/*          - get: sends a file from the server to the client.*/
+/*          - put: receives a file from the client.           */
+/* parameters:                                               */
+/*    - client: the mysock object representing the client.   */
+/*************************************************************/
 void handleClient(mysock &client) {
     string current_directory = base_directory;
 
@@ -162,8 +212,13 @@ void handleClient(mysock &client) {
     }
 }
 
-
-
+/*************************************************************/
+/* function: signalHandler                                    */
+/* purpose: handles termination signals (e.g., SIGINT) to     */
+/*          gracefully shut down the server.                   */
+/* parameters:                                               */
+/*    - signal: the signal that was received.                 */
+/*************************************************************/
 void signalHandler(int signal) {
     if (signal == SIGINT) {
         shutdown_flag = true;
@@ -173,6 +228,18 @@ void signalHandler(int signal) {
     }
 }
 
+/*************************************************************/
+/* function: main                                             */
+/* purpose: initializes the server, binds it to a port,      */
+/*          and listens for incoming client connections.      */
+/*          It processes incoming connections and handles    */
+/*          them in separate processes using fork.           */
+/* parameters:                                               */
+/*    - argc: the number of command-line arguments.          */
+/*    - argv: the command-line arguments.                    */
+/* exception: throws runtime errors if arguments are missing*/
+/*           or invalid.                                      */
+/*************************************************************/
 int main(int argc, char **argv) {
     if (argc != 5) {
         cerr << "Usage: " << argv[0] << " -p <port> -d <directory>\n";
@@ -227,4 +294,3 @@ int main(int argc, char **argv) {
 
     return 0;
 }
-
