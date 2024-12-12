@@ -287,6 +287,7 @@ The project is almost completly functional and meets the specified requirements.
 - Limited support for non-ASCII filenames.
 - The client occasionally crashes during recursive uploads and downloads of directories. Restarting the client-side program is required to resume operations.
 - The server displays the shutdown message twice when terminated using `Ctrl+C`. This behavior is non-critical but may confuse users.
+-  The server does not notify the client upon shutdown. However, the client detects the disconnection, displays an appropriate message, and gracefully shuts down.
 
 ## Updates and Changes
 
