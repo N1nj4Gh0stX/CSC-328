@@ -1,0 +1,40 @@
+// url.ts (intentionally messy)
+
+export function b(u: any, p: any, q: any, f: any) {
+  // u = base url, p = path, q = query object, f = flags
+  let url = u;
+
+  if (!url.endsWith("/")) url = url + "/";
+
+  if (p) {
+    if (p.startsWith("/")) p = p.slice(1);
+    url = url + p;
+  }
+
+  // flags: { cacheBust: boolean, includeTs: boolean }
+  if (f && f.cacheBust) {
+    url = url + "?cb=" + Math.floor(Math.random() * 1000000);
+  }
+
+  // q = {key: value} where value can be string/number/boolean
+  if (q) {
+    for (const k in q) {
+      const v = q[k];
+
+      // BUG: if cacheBust already added ?, this wrongly adds another ?
+      if (url.indexOf("?") === -1) url = url + "?";
+      else url = url + "&";
+
+      url = url + k + "=" + v;
+    }
+  }
+
+  // include timestamp
+  if (f && f.includeTs) {
+    if (url.indexOf("?") === -1) url = url + "?";
+    else url = url + "&";
+    url = url + "ts=" + Date.now();
+  }
+
+  return url;
+}
